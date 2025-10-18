@@ -93,6 +93,8 @@ if menu == "📤 Dodaj zdjęcia":
         for file in uploaded_files:
             image = Image.open(file)
             st.image(image, caption=file.name, use_column_width=True)
+            # wyświetl podgląd
+            st.image(image_bytes, caption=file.name, use_column_width=True)
             image_bytes = file.read()
 
             with st.spinner("🧠 Generuję opis zdjęcia..."):
