@@ -96,6 +96,8 @@ if menu == "📤 Dodaj zdjęcia":
             # wyświetl podgląd
             st.image(image_bytes, caption=file.name, use_column_width=True)
             image_bytes = file.read()
+            # wyświetl podgląd
+            st.image(image_bytes, caption=file.name, use_column_width=True)
 
             with st.spinner("🧠 Generuję opis zdjęcia..."):
                 try:
