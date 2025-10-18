@@ -16,9 +16,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_URL = os.getenv("QDRANT_URL")  # np. "https://12345-abcd.eu-central.aws.cloud.qdrant.io"
 
-# Dodatkowo pokaż, jakie klucze są dostępne
-st.write("🔑 Klucze dostępne w st.secrets:", list(st.secrets.keys()))
-
 if not all([OPENAI_API_KEY, QDRANT_API_KEY, QDRANT_URL]):
     st.error("❌ Brakuje kluczy środowiskowych. Ustaw OPENAI_API_KEY, QDRANT_API_KEY i QDRANT_URL.")
     st.stop()
@@ -89,35 +86,49 @@ menu = st.sidebar.radio("Wybierz opcję", ["📤 Dodaj zdjęcia", "🔍 Szukaj p
 if menu == "📤 Dodaj zdjęcia":
     uploaded_files = st.file_uploader("Prześlij jedno lub więcej zdjęć", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-    if uploaded_files:
-        for file in uploaded_files:
-            image = Image.open(file)
+   if uploaded_files:
+    for file in uploaded_files:
+        # 🔹 Przesuń wskaźnik na początek pliku (na wypadek, gdyby był już otwarty)
+        file.seek(0)
+
+        # 🔹 Sprawdź, czy to naprawdę obraz
+        if file.type not in ["image/jpeg", "image/png"]:
+            st.warning(f"⚠️ Plik {file.name} ma nieobsługiwany format ({file.type}). Dozwolone: JPG, PNG.")
+            continue
+
+        try:
+            # 🔹 Otwórz obraz przez PIL
+            image = Image.open(file).convert("RGB")
+
+            # 🔹 Wyświetl obraz
             st.image(image, caption=file.name, use_column_width=True)
 
-            image_bytes = file.read()
-            # wyświetl podgląd
-            st.image(image_bytes, caption=file.name, use_column_width=True)
+            # 🔹 Zamień na bajty (do dalszego przetwarzania)
+            buffer = io.BytesIO()
+            image.save(buffer, format="JPEG")
+            image_bytes = buffer.getvalue()
 
             with st.spinner("🧠 Generuję opis zdjęcia..."):
-                try:
-                    description = generate_description(image_bytes)
-                    embedding = get_embedding(description)
+                description = generate_description(image_bytes)
+                embedding = get_embedding(description)
 
-                    qdrant.upsert(
-                        collection_name=COLLECTION_NAME,
-                        points=[
-                            models.PointStruct(
-                                id=int.from_bytes(os.urandom(8), "big"),
-                                vector=embedding,
-                                payload={"description": description, "filename": file.name}
-                            )
-                        ]
-                    )
+                qdrant.upsert(
+                    collection_name=COLLECTION_NAME,
+                    points=[
+                        models.PointStruct(
+                            id=int.from_bytes(os.urandom(8), "big"),
+                            vector=embedding,
+                            payload={"description": description, "filename": file.name}
+                        )
+                    ]
+                )
 
-                    st.success(f"✅ Zdjęcie '{file.name}' zostało opisane i zapisane w bazie Qdrant Cloud!")
-                    st.write("**Opis:**", description)
-                except Exception as e:
-                    st.error(f"Błąd podczas przetwarzania: {e}")
+                st.success(f"✅ Zdjęcie '{file.name}' zostało zapisane w Qdrant Cloud!")
+                st.write("**Opis:**", description)
+
+        except Exception as e:
+            st.error(f"Błąd podczas przetwarzania pliku {file.name}: {e}")
+
 
         points, _ = qdrant.scroll(collection_name=COLLECTION_NAME)
         st.info(f"📦 Liczba rekordów w kolekcji: {len(points)}")
