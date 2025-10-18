@@ -16,6 +16,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_URL = os.getenv("QDRANT_URL")  # np. "https://12345-abcd.eu-central.aws.cloud.qdrant.io"
 
+# Dodatkowo pokaż, jakie klucze są dostępne
+st.write("🔑 Klucze dostępne w st.secrets:", list(st.secrets.keys()))
+
 if not all([OPENAI_API_KEY, QDRANT_API_KEY, QDRANT_URL]):
     st.error("❌ Brakuje kluczy środowiskowych. Ustaw OPENAI_API_KEY, QDRANT_API_KEY i QDRANT_URL.")
     st.stop()
